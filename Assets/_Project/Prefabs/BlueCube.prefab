@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2959020488012437510, guid: a1f9c3d07b7cc4c5fa5fc9a1c3a44b55, type: 3}
       propertyPath: m_Name
-      value: GreenCube
+      value: BlueCube
       objectReference: {fileID: 0}
     - target: {fileID: 3486720767616281158, guid: a1f9c3d07b7cc4c5fa5fc9a1c3a44b55, type: 3}
       propertyPath: m_LocalScale.x
@@ -71,7 +71,7 @@ PrefabInstance:
     - target: {fileID: 8396959385985537566, guid: a1f9c3d07b7cc4c5fa5fc9a1c3a44b55, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 9d9b3f2d3e10f49e8881132b1c968f23, type: 2}
+      objectReference: {fileID: 2100000, guid: 4b92224385586407893f6729ae5ab82c, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -98,6 +98,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dissolveDuration: 3
-  blockColor: 2
-  startColor: {r: 0.36078432, g: 1, b: 0, a: 0}
-  endColor: {r: 0.5186, g: 0, b: 1, a: 0}
+  blockColor: 1
+  startColor: {r: 0.1764706, g: 0.5294118, b: 0.8980392, a: 0}
+  endColor: {r: 0, g: 1, b: 0.68365693, a: 0}

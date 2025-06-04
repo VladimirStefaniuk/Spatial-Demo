@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Spawner : MonoBehaviour
 {
-     [SerializeField] public GameObject itemToSpawn;
+     [SerializeField] public List<GameObject> itemsToSpawn;
      [SerializeField] private ParticleSystem particleSystemToPlay; 
      
      [SerializeField] private bool spawnOnEnable = true;
@@ -17,7 +18,8 @@ public class Spawner : MonoBehaviour
      
      public void Spawn()
      {
-          var item = Instantiate(itemToSpawn, transform.position, transform.rotation);
+          GameObject prefab = itemsToSpawn[Random.Range(0, itemsToSpawn.Count)];
+          var item = Instantiate(prefab, transform.position, transform.rotation);
           if (item)
           {
                var physics = item.GetComponent<Rigidbody>();

@@ -1,12 +1,20 @@
 using System.Collections;
 using UnityEngine;
 
+public enum BlockColor
+{
+    Red, 
+    Blue,
+    Green
+}
+
 public class Block : MonoBehaviour
 {
     private static readonly int DissolveStrength = Shader.PropertyToID("_DissolveStrength");
     private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
     [SerializeField] private float dissolveDuration = 1;
  
+    [SerializeField] private BlockColor blockColor;
     [SerializeField] private Color startColor;
     [SerializeField] private Color endColor;
 
@@ -15,6 +23,7 @@ public class Block : MonoBehaviour
     private float _dissolveStrength = 1;
     private Renderer _renderer;
     private IEnumerator _dissolveRoutine;
+ 
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Awake()
@@ -51,4 +60,6 @@ public class Block : MonoBehaviour
  
         _dissolveRoutine = null;
     }
+    
+    public BlockColor GetColor() => blockColor; 
 }

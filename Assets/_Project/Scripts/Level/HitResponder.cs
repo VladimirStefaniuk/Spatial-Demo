@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -6,6 +5,9 @@ public class HitResponder : MonoBehaviour
 {
    [SerializeField] private string tagToCheck = "Interactable";
    [SerializeField] private UnityEvent onHit;
+   [SerializeField] private UnityEvent onCollected;
+   [SerializeField] private BlockColor color;
+   
    private void OnCollisionEnter(Collision other)
    {
       Debug.Log(other.gameObject.name);
@@ -17,6 +19,11 @@ public class HitResponder : MonoBehaviour
          {
             block.StartDissolver();
             onHit.Invoke();
+            
+            if(block.GetColor() == color)
+            {
+               onCollected.Invoke();
+            }
          }
       }
    }

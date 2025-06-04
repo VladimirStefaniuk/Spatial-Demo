@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public struct CameraInput
@@ -13,9 +14,7 @@ public class PlayerCamera : MonoBehaviour
     private Vector3 _cachedEulerAngles;
 
     public void Initialize(Transform cameraTarget)
-    {
-        Cursor.lockState = CursorLockMode.Locked;
-
+    { 
         _cachedEulerAngles = cameraTarget.rotation.eulerAngles;
         
         transform.position = cameraTarget.position;
@@ -33,7 +32,5 @@ public class PlayerCamera : MonoBehaviour
         transform.position = target.position;
     }
 
-    public Camera GetCamera() => playerCamera;
-    
-    public Vector3 GetRotationEulerAngles() => _cachedEulerAngles;
+    public Camera GetCamera() => playerCamera; 
 }

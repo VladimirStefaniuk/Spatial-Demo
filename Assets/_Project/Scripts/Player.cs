@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine; 
 using UnityEngine.InputSystem;
 
@@ -8,9 +9,11 @@ public class Player : MonoBehaviour
     [SerializeField] private PlayerCamera playerCamera;
     [SerializeField] private InputActionAsset inputActions;
     [SerializeField] private CrosshairController crosshairController;
-
-
-    public float throwSpeed = 5f;
+ 
+     
+    [SerializeField] private float _interactibilityDistance = 100;
+    [SerializeField] private float swipeSampleWindowSeconds = 0.3f;  
+    [SerializeField] private  float throwSpeed = 1f;
     
     private InputAction _moveAction;
     private InputAction _lookAction;
@@ -22,13 +25,16 @@ public class Player : MonoBehaviour
     private Vector3 _screenCenterVector;
     private RaycastHit _currentlyHitObject;
     private Vector3 _offset;
-    private Plane _dragPlane;
+    private Plane _dragPlane; 
+    private Transform _selectedObject;
+    private Vector2 _cachedMoveInput;
+    private Vector2 _cachedLookInput;
     
-    private Vector2 _initialLookPosition; 
+    private Vector3 _dragTargetOffsetFromRayOrigin;
 
+    private float _dragDistance;
+    private readonly List<(Vector2 position, float time)> _lookHistory = new();
 
-    [SerializeField] private float _interactibilityDistance = 100;
-    
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Awake()
@@ -39,6 +45,10 @@ public class Player : MonoBehaviour
 
     private void Start()
     {
+        // Lock and hide the cursor
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        
         _camera = playerCamera.GetCamera();
         _screenCenterVector = new Vector3(0.5f, 0.5f, 0f);
         
@@ -69,12 +79,16 @@ public class Player : MonoBehaviour
             Move = _cachedMoveInput,
             Jump = _jumpAction.WasPressedThisFrame(),
         });
-        
-        Vector2 currentLook = _lookAction.ReadValue<Vector2>();
-        _lookDelta = currentLook - _lastLookPosition;
-        _lastLookPosition = currentLook;
+       
+        // Track look input history for throw velocity
+        _lookHistory.Add((_cachedLookInput, Time.time));
 
-
+        // Remove old entries
+        while (_lookHistory.Count > 0 && Time.time - _lookHistory[0].time > swipeSampleWindowSeconds)
+        {
+            _lookHistory.RemoveAt(0);
+        }
+ 
         UpdateLook();
     }
 
@@ -82,86 +96,40 @@ public class Player : MonoBehaviour
     {
         DragSelectedObject();
     }
-    
+ 
+    private void LateUpdate()
+    {
+        playerCamera.UpdatePosition(playerCharacter.GetCameraTarget());
+    }
+     
     private void DragSelectedObject()
     {
         if (_selectedObject == null) return;
 
         Ray ray = _camera.ScreenPointToRay(Mouse.current.position.ReadValue());
 
-        if (_dragPlane.Raycast(ray, out float enter))
+        Vector3 targetPosition = ray.origin + ray.direction * _dragDistance + _dragTargetOffsetFromRayOrigin;
+
+        Rigidbody rb = _selectedObject.GetComponent<Rigidbody>();
+        if (rb != null)
         {
-            Vector3 targetPosition = ray.GetPoint(enter) + _offset;
+            Vector3 toTarget = targetPosition - rb.position;
+            float velocityMultiplier = 10f;
 
-            Rigidbody rb = _selectedObject.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                Vector3 toTarget = targetPosition - rb.position;
-                float velocityMultiplier = 10f; // Increase for faster response
-
-                rb.linearVelocity = toTarget * velocityMultiplier;
-
-                // Optional: dampen angular velocity
-                rb.angularVelocity = Vector3.zero;
-            }
+            rb.linearVelocity = toTarget * velocityMultiplier;
+            rb.angularVelocity = Vector3.zero;
         }
     }
-
-
  
-    private void LateUpdate()
-    {
-        playerCamera.UpdatePosition(playerCharacter.GetCameraTarget());
-    }
-
-    private Transform _selectedObject;
-    private Vector2 _cachedMoveInput;
-    private Vector2 _cachedLookInput;
-
-    private Vector2 _initialLook;
-    
-    private Vector3 _initialHoldOffset;
-    private float _zOffsetModifier = 0f;
-    [SerializeField] private float _pushPullSpeed = 2f;
-    private Vector3 _initialPlayerPosition;
-
-    
-    private Vector2 _lastLookPosition;
-    private Vector2 _lookDelta;
-    private float _mouseDeltaSmoothing = 0.1f;
-    public float dragSpeed = 1f;
-    
     private void UpdateLook()
-    {
+    { 
+        // is dragging
         if (_attackAction.IsPressed() && _selectedObject)
-        { 
-            // _lookDelta = (_cachedLookInput - _lastLookPosition) / Time.deltaTime;
-            // _lastLookPosition = _cachedLookInput;
-            //
-            // crosshairController.SetState(CrosshairController.State.Active);
-            //
-            // // Dynamically update drag plane using current camera forward, at updated distance
-            // Vector3 dragPlaneOrigin = transform.position + transform.forward * (_initialHoldOffset.magnitude + _zOffsetModifier);
-            // _dragPlane = new Plane(-_camera.transform.forward, dragPlaneOrigin);
-            //
-            // // Update z offset based on player movement
-            // _zOffsetModifier += _cachedMoveInput.y * _pushPullSpeed * Time.deltaTime;
-            //
-            // // Compute the target world position from the cursor
-            // Ray ray = _camera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            // if (_dragPlane.Raycast(ray, out float enter))
-            // {
-            //     Vector3 targetPosition = ray.GetPoint(enter) + _offset;
-            //
-            //     Rigidbody rb = _selectedObject.GetComponent<Rigidbody>();
-            //     if (rb != null)
-            //     {
-            //         // Use MovePosition for physics-aware movement
-            //         rb.MovePosition(targetPosition);
-            //     }
-            // }
+        {
+            return;
         } 
-        else if (_attackAction.WasReleasedThisFrame())
+        
+        if (_attackAction.WasReleasedThisFrame())
         {
             crosshairController.SetState(CrosshairController.State.Idle);
             
@@ -176,31 +144,35 @@ public class Player : MonoBehaviour
                     rb.constraints = RigidbodyConstraints.None;
 
                     // Convert look delta to screen-space swipe direction
-                    Vector2 swipeDelta = _cachedLookInput - _initialLook;
+                    Vector2 swipeDelta = Vector2.zero;
+                    if (_lookHistory.Count >= 2)
+                    {
+                        swipeDelta = _cachedLookInput - _lookHistory[0].position;
+                    }
 
                     // Project to world space using camera orientation
-                    Vector3 worldSwipeDirection = (_camera.transform.right * swipeDelta.x +
-                                                   _camera.transform.up * swipeDelta.y).normalized;
+                    float timeDelta = Time.time - _lookHistory[0].time;
+                    Vector2 swipeVelocity = swipeDelta / timeDelta;
+                    float throwForce = swipeVelocity.magnitude * throwSpeed;
+                    Vector3 worldSwipeDirection = (_camera.transform.right * swipeVelocity.x +
+                                                   _camera.transform.up * swipeVelocity.y).normalized;
 
-                    float swipeMagnitude = swipeDelta.magnitude;
-                    float throwForce = swipeMagnitude * throwSpeed;
- 
                     rb.linearVelocity = worldSwipeDirection * throwForce;
-                    
+
                     // Add torgue
-                    Vector3 torqueDirection = Vector3.Cross(_camera.transform.forward, worldSwipeDirection).normalized;
+                    Vector3 torqueDirection =
+                        Vector3.Cross(_camera.transform.forward, worldSwipeDirection).normalized;
                     float torqueStrength = throwForce * 0.1f;
 
-                    rb.AddTorque(torqueDirection * torqueStrength, ForceMode.Impulse); 
-                }
-
+                    rb.AddTorque(torqueDirection * torqueStrength, ForceMode.Impulse);
+                } 
             }
             
             _selectedObject = null;
         }
         else
         { 
-            var _canInteract = false;
+            var canInteract = false;
 
             // show current state of cursor
             var crosshairRay = _camera.ViewportPointToRay(_screenCenterVector);
@@ -208,52 +180,33 @@ public class Player : MonoBehaviour
             {
                 if (_currentlyHitObject.collider.CompareTag(Data.GameConstants.InteractableTag))
                 { 
-                    _canInteract = true;
+                    canInteract = true;
                 }
             }
 
-            if (_attackAction.WasPressedThisFrame() && _canInteract)
+            if (_attackAction.WasPressedThisFrame() && canInteract)
             {
                 crosshairController.SetState(CrosshairController.State.Active);
-                
-                
+
                 _selectedObject = _currentlyHitObject.transform;
-                
-                // make selected object floatable
+
+                // Set up Rigidbody
                 Rigidbody rb = _selectedObject.GetComponent<Rigidbody>();
                 rb.isKinematic = false;
                 rb.useGravity = false;
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
                 rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
                 rb.constraints = RigidbodyConstraints.FreezeRotation;
-                // rb.linearDamping = 0f;
-                // rb.angularDamping = 0f;
-                //     
-                // Lock drag to XY plane (Z stays constant)
-                // Use a drag plane perpendicular to camera
-                _dragPlane = new Plane(-_camera.transform.forward, _selectedObject.position);
 
-
-                
-                // Create a plane at the object's position for dragging
-                // _dragPlane = new Plane(Vector3.forward, _selectedObject.transform.position);
-
-                // Calculate the offset between object and mouse hit point
-                _dragPlane.Raycast(crosshairRay, out float enter);
-                    
-                _offset = _selectedObject.transform.position - crosshairRay.GetPoint(enter);
-                
-                // Cache offset from player to object when picking up
-                _initialHoldOffset = _selectedObject.transform.position - transform.position;
-                _initialPlayerPosition = transform.position;
-                _zOffsetModifier = 0f;
-
-                _initialLook = _cachedLookInput;
-                _initialLookPosition = _lookAction.ReadValue<Vector2>();
-                _lastLookPosition = _initialLookPosition;
-
+                // Calculate drag distance and initial offset from camera ray
+                Ray ray = _camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+                if (Physics.Raycast(ray, out RaycastHit hitInfo, _interactibilityDistance))
+                {
+                    _dragDistance = Vector3.Distance(_camera.transform.position, hitInfo.point);
+                    _dragTargetOffsetFromRayOrigin = _selectedObject.position - (ray.origin + ray.direction * _dragDistance);
+                }
             }
-            else if (_canInteract)
+            else if (canInteract)
             {
                 crosshairController.SetState(CrosshairController.State.Interactable);
             }
