@@ -2344,6 +2344,7 @@ MonoBehaviour:
   label: {fileID: 1584251351}
   typingSpeed: 0.05
   scaleDuration: 0.2
+  hideAfterSeconds: 5
 --- !u!4 &1099064980 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5054274673487322894, guid: 99131a37417084618a3ce3af57158a9a, type: 3}
@@ -3196,7 +3197,7 @@ MonoBehaviour:
     m_Bits: 64
   stopNaNPropagation: 1
   finalBlitToCameraTarget: 0
-  antialiasingMode: 0
+  antialiasingMode: 1
   temporalAntialiasing:
     jitterSpread: 0.75
     sharpness: 0.25
@@ -3205,7 +3206,7 @@ MonoBehaviour:
   subpixelMorphologicalAntialiasing:
     quality: 2
   fastApproximateAntialiasing:
-    fastMode: 0
+    fastMode: 1
     keepAlpha: 0
   fog:
     enabled: 1
@@ -3232,8 +3233,8 @@ MonoBehaviour:
       colorBlindnessType: 0
       colorBlindnessStrength: 1
   m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
-  m_ShowToolkit: 0
-  m_ShowCustomSorter: 0
+  m_ShowToolkit: 1
+  m_ShowCustomSorter: 1
   breakBeforeColorGrading: 0
   m_BeforeTransparentBundles: []
   m_BeforeStackBundles: []
@@ -3271,9 +3272,9 @@ MonoBehaviour:
   playerCamera: {fileID: 1642927010}
   inputActions: {fileID: -944628639613478452, guid: 2dabb47073c524df7af0c13249651e27, type: 3}
   crosshairController: {fileID: 1420491340}
-  throwSpeed: 1
   _interactibilityDistance: 100
-  swipeSampleWindow: 0.3
+  swipeSampleWindowSeconds: 0.3
+  throwSpeed: 1
 --- !u!4 &1536887153
 Transform:
   m_ObjectHideFlags: 0
